@@ -1,5 +1,6 @@
 "use client"
 
+import { motion } from "motion/react"
 import { useSection } from "@/hooks/use-section"
 import {
   Mic,
@@ -541,7 +542,12 @@ export function ScrapePreview({
     prepQuestions.isLoading
 
   return (
-    <div className="mx-auto w-full max-w-5xl animate-fade-up">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: "easeOut" as const }}
+      className="mx-auto w-full max-w-5xl"
+    >
       {/* Header with CTA */}
       <div className="mb-6 flex items-start justify-between">
         {role.data ? (
@@ -604,61 +610,54 @@ export function ScrapePreview({
         </div>
       )}
 
-      {/* Main grid — 2 columns */}
-      <div className="grid gap-2 md:grid-cols-2">
-        {/* Left — Job Analysis */}
-        <div className="flex flex-col gap-2">
-          {role.isLoading ? (
-            <BadgeSkeleton />
-          ) : role.data ? (
-            <RoleCard data={role.data} />
-          ) : null}
-          {topics.isLoading ? (
-            <CardSkeleton lines={4} />
-          ) : topics.data ? (
-            <TopicsCard data={topics.data} />
-          ) : null}
-          {signals.isLoading ? (
-            <BadgeSkeleton />
-          ) : signals.data ? (
-            <SignalsCard data={signals.data} />
-          ) : null}
-          {prepQuestions.isLoading ? (
-            <CardSkeleton lines={6} />
-          ) : prepQuestions.data ? (
-            <PrepQuestionsCard data={prepQuestions.data} />
-          ) : null}
-          {salaryIntel.isLoading ? (
-            <CardSkeleton lines={3} />
-          ) : salaryIntel.data ? (
-            <SalaryIntelCard data={salaryIntel.data} />
-          ) : null}
-        </div>
-
-        {/* Right — Company Research */}
-        <div className="flex flex-col gap-2">
-          {overview.isLoading ? (
-            <CardSkeleton lines={6} />
-          ) : overview.data ? (
-            <CompanyOverviewCard data={overview.data} />
-          ) : null}
-          {tech.isLoading ? (
-            <BadgeSkeleton />
-          ) : tech.data ? (
-            <TechCultureCard data={tech.data} />
-          ) : null}
-          {interview.isLoading ? (
-            <CardSkeleton lines={5} />
-          ) : interview.data ? (
-            <InterviewIntelCard data={interview.data} />
-          ) : null}
-          {news.isLoading ? (
-            <CardSkeleton lines={3} />
-          ) : news.data ? (
-            <NewsCard data={news.data} />
-          ) : null}
-        </div>
+      {/* Main grid — masonry-style balanced columns */}
+      <div className="columns-1 gap-2 md:columns-2 [&>*]:mb-2 [&>*]:break-inside-avoid">
+        {role.isLoading ? (
+          <BadgeSkeleton />
+        ) : role.data ? (
+          <RoleCard data={role.data} />
+        ) : null}
+        {overview.isLoading ? (
+          <CardSkeleton lines={6} />
+        ) : overview.data ? (
+          <CompanyOverviewCard data={overview.data} />
+        ) : null}
+        {topics.isLoading ? (
+          <CardSkeleton lines={4} />
+        ) : topics.data ? (
+          <TopicsCard data={topics.data} />
+        ) : null}
+        {tech.isLoading ? (
+          <BadgeSkeleton />
+        ) : tech.data ? (
+          <TechCultureCard data={tech.data} />
+        ) : null}
+        {signals.isLoading ? (
+          <BadgeSkeleton />
+        ) : signals.data ? (
+          <SignalsCard data={signals.data} />
+        ) : null}
+        {interview.isLoading ? (
+          <CardSkeleton lines={5} />
+        ) : interview.data ? (
+          <InterviewIntelCard data={interview.data} />
+        ) : null}
+        {prepQuestions.isLoading ? (
+          <CardSkeleton lines={6} />
+        ) : prepQuestions.data ? (
+          <PrepQuestionsCard data={prepQuestions.data} />
+        ) : null}
+        {news.isLoading ? (
+          <CardSkeleton lines={3} />
+        ) : news.data ? (
+          <NewsCard data={news.data} />
+        ) : null}
+        {salaryIntel.isLoading ? (
+          <CardSkeleton lines={3} />
+        ) : salaryIntel.data ? (
+          <SalaryIntelCard data={salaryIntel.data} />
+        ) : null}
       </div>
-    </div>
+    </motion.div>
   )
 }

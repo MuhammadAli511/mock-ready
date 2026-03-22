@@ -1,5 +1,6 @@
 "use client"
 
+import { motion } from "motion/react"
 import type { SessionDebrief } from "@/lib/types"
 import {
   Accordion,
@@ -61,7 +62,12 @@ export function Debrief({ debrief, onReset }: DebriefProps) {
     qs.length ? Math.round(qs.reduce((s, q) => s + q[key], 0) / qs.length) : 0
 
   return (
-    <div className="mx-auto w-full max-w-4xl animate-fade-up space-y-10 py-8">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: "easeOut" as const }}
+      className="mx-auto w-full max-w-4xl space-y-10 py-8"
+    >
       {/* Two-column top section */}
       <div className="grid gap-10 md:grid-cols-[1fr_1.5fr]">
         {/* Left — Score hero */}
@@ -161,6 +167,6 @@ export function Debrief({ debrief, onReset }: DebriefProps) {
         <RotateCcw className="h-3.5 w-3.5" />
         New Interview
       </button>
-    </div>
+    </motion.div>
   )
 }
