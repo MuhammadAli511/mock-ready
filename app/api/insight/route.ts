@@ -41,13 +41,8 @@ export async function POST(request: Request) {
         },
       ],
       temperature: 0.4,
-      max_tokens: 200,
+      reasoning_effort: "low",
     })
-
-    console.log(
-      "Cerebras response:",
-      JSON.stringify(completion.choices[0], null, 2),
-    )
 
     const insight = completion.choices[0]?.message?.content ?? ""
 
