@@ -120,10 +120,13 @@ export function LiveInterview({
   messagesRef.current = messages
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  // Streaming agent response state
+  const [streamingText, setStreamingText] = useState<string | null>(null)
+  const streamingTextRef = useRef<string>("")
+
   // Insight state
   const [currentInsight, setCurrentInsight] = useState<string | null>(null)
   const [insightVisible, setInsightVisible] = useState(false)
-  const insightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const insightAbortRef = useRef<AbortController | null>(null)
   const lastInsightTimeRef = useRef<number>(0)
 
@@ -142,7 +145,7 @@ export function LiveInterview({
           ),
         },
         language: "en",
-        firstMessage: `Hey, welcome! Thanks for taking the time to meet today. I'm Sarah, one of the hiring managers here at ${companyLabel}. I'll be running our conversation for the ${roleLabel} position. We'll spend about 30 minutes together — I'll ask about your background, get into some technical topics relevant to the role, and leave time at the end for any questions you have for me. Sound good? Alright — to kick things off, I'd love to hear a bit about you. Walk me through your background and what brought you to this opportunity.`,
+        firstMessage: `Hey, welcome! I'm Sarah from ${companyLabel}. Thanks for chatting with me about the ${roleLabel} role. To get us started — tell me a bit about yourself and what drew you to this opportunity.`,
       },
     }),
     [rawText, resumeText, roleLabel, companyLabel],
@@ -165,17 +168,37 @@ export function LiveInterview({
       setConnectionError(message)
     },
     onMessage: (message) => {
-      const newMsg: TranscriptMessage = {
-        id: crypto.randomUUID(),
-        role: message.role === "agent" ? "agent" : "user",
-        message: message.message,
-        timestamp: new Date(),
-      }
-      setMessages((prev) => [...prev, newMsg])
-
       if (message.role === "agent") {
+        // Finalize the streaming message with the complete text
+        setStreamingText(null)
+        streamingTextRef.current = ""
+        const newMsg: TranscriptMessage = {
+          id: crypto.randomUUID(),
+          role: "agent",
+          message: message.message,
+          timestamp: new Date(),
+        }
+        setMessages((prev) => [...prev, newMsg])
         fetchInsight()
+      } else {
+        const newMsg: TranscriptMessage = {
+          id: crypto.randomUUID(),
+          role: "user",
+          message: message.message,
+          timestamp: new Date(),
+        }
+        setMessages((prev) => [...prev, newMsg])
       }
+    },
+    onAgentChatResponsePart: (part) => {
+      if (part.type === "start") {
+        streamingTextRef.current = ""
+        setStreamingText("")
+      } else if (part.type === "delta") {
+        streamingTextRef.current += part.text
+        setStreamingText(streamingTextRef.current)
+      }
+      // "stop" is handled by onMessage finalizing the message
     },
     onModeChange: (mode) => {
       console.log("Mode change:", mode)
@@ -256,11 +279,6 @@ export function LiveInterview({
 
       setCurrentInsight(data.insight)
       setInsightVisible(true)
-      if (insightTimerRef.current) clearTimeout(insightTimerRef.current)
-
-      insightTimerRef.current = setTimeout(() => {
-        setInsightVisible(false)
-      }, 8000)
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return
       console.error("Insight fetch error:", err)
@@ -270,13 +288,12 @@ export function LiveInterview({
   // Auto-scroll transcript to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+  }, [messages, streamingText])
 
   // Cleanup insight on unmount
   useEffect(() => {
     return () => {
       insightAbortRef.current?.abort()
-      if (insightTimerRef.current) clearTimeout(insightTimerRef.current)
     }
   }, [])
 
@@ -343,8 +360,7 @@ export function LiveInterview({
               stiffness: 280,
               mass: 0.8,
             }}
-            onClick={() => setInsightVisible(false)}
-            className="absolute right-4 top-4 z-[70] max-w-[280px] cursor-pointer rounded-lg border border-[#eab308]/30 bg-[#111113]/95 px-4 py-3 backdrop-blur-md"
+            className="absolute right-4 top-4 z-[70] max-w-[280px] rounded-lg border border-[#eab308]/30 bg-[#111113]/95 px-4 py-3 backdrop-blur-md"
           >
             <div className="mb-1.5 flex items-center gap-1.5">
               <div className="h-1.5 w-1.5 rounded-full bg-[#eab308]" />
@@ -473,6 +489,20 @@ export function LiveInterview({
                   </p>
                 </div>
               ))}
+              {streamingText !== null && (
+                <div>
+                  <div className="mb-0.5 flex items-center gap-1.5">
+                    <div className="h-1.5 w-1.5 rounded-full bg-[#3b82f6]" />
+                    <span className="font-mono text-[10px] font-medium text-[#3b82f6]">
+                      Sarah
+                    </span>
+                  </div>
+                  <p className="pl-[11px] text-[13px] leading-relaxed text-[#d4d4d8]">
+                    {streamingText}
+                    <span className="ml-0.5 inline-block h-3.5 w-[2px] animate-pulse bg-[#3b82f6]" />
+                  </p>
+                </div>
+              )}
               <div ref={messagesEndRef} />
             </div>
           )}
