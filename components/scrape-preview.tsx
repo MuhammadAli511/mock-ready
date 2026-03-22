@@ -62,16 +62,22 @@ function DashCard({
 }) {
   return (
     <div
-      className={`rounded-xl border border-[#1c1c1e] bg-[#111113] p-4 ${className ?? ""}`}
+      className={`h-full rounded-xl border border-[#1c1c1e] bg-[#111113] p-4 ${className ?? ""}`}
     >
       {children}
     </div>
   )
 }
 
-function CardSkeleton({ lines = 3 }: { lines?: number }) {
+function CardSkeleton({
+  lines = 3,
+  className,
+}: {
+  lines?: number
+  className?: string
+}) {
   return (
-    <DashCard>
+    <DashCard className={className}>
       <div className="mb-3 h-2.5 w-16 animate-pulse rounded bg-[#1c1c1e]" />
       <div className="space-y-2">
         {Array.from({ length: lines }).map((_, i) => (
@@ -85,9 +91,9 @@ function CardSkeleton({ lines = 3 }: { lines?: number }) {
   )
 }
 
-function BadgeSkeleton() {
+function BadgeSkeleton({ className }: { className?: string } = {}) {
   return (
-    <DashCard>
+    <DashCard className={className}>
       <div className="mb-3 h-2.5 w-16 animate-pulse rounded bg-[#1c1c1e]" />
       <div className="flex flex-wrap gap-1.5">
         {[56, 40, 64, 36, 48].map((w, i) => (
@@ -203,12 +209,12 @@ function SignalsCard({ data }: { data: SignalsAnalysis }) {
 
 function PrepQuestionsCard({ data }: { data: PrepQuestions }) {
   return (
-    <DashCard>
+    <DashCard className="md:col-span-2">
       <p className="label-mono mb-3">
         <HelpCircle className="mr-1 inline h-3 w-3" />
         Questions to Prepare
       </p>
-      <div className="space-y-3">
+      <div className="grid gap-3 md:grid-cols-2 md:gap-x-6">
         {data.questions.map((q, i) => (
           <div key={i}>
             <p className="text-[12px] text-[#fafafa]">{q.question}</p>
@@ -610,8 +616,8 @@ export function ScrapePreview({
         </div>
       )}
 
-      {/* Main grid — masonry-style balanced columns */}
-      <div className="columns-1 gap-2 md:columns-2 [&>*]:mb-2 [&>*]:break-inside-avoid">
+      {/* Main grid — flat, cards are direct children so rows align */}
+      <div className="grid gap-2 md:grid-cols-2">
         {role.isLoading ? (
           <BadgeSkeleton />
         ) : role.data ? (
@@ -622,6 +628,7 @@ export function ScrapePreview({
         ) : overview.data ? (
           <CompanyOverviewCard data={overview.data} />
         ) : null}
+
         {topics.isLoading ? (
           <CardSkeleton lines={4} />
         ) : topics.data ? (
@@ -632,6 +639,7 @@ export function ScrapePreview({
         ) : tech.data ? (
           <TechCultureCard data={tech.data} />
         ) : null}
+
         {signals.isLoading ? (
           <BadgeSkeleton />
         ) : signals.data ? (
@@ -642,11 +650,13 @@ export function ScrapePreview({
         ) : interview.data ? (
           <InterviewIntelCard data={interview.data} />
         ) : null}
+
         {prepQuestions.isLoading ? (
-          <CardSkeleton lines={6} />
+          <CardSkeleton lines={6} className="md:col-span-2" />
         ) : prepQuestions.data ? (
           <PrepQuestionsCard data={prepQuestions.data} />
         ) : null}
+
         {news.isLoading ? (
           <CardSkeleton lines={3} />
         ) : news.data ? (
