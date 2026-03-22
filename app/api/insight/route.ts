@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   }
 
   const resumeSection = resumeText
-    ? `\n\n## Candidate Resume (summary)\n${resumeText.slice(0, 1000)}`
+    ? `\n\n## Candidate Resume (summary)\n${resumeText.slice(0, 1500)}`
     : ""
 
   try {
@@ -33,20 +33,40 @@ export async function POST(request: Request) {
       messages: [
         {
           role: "system",
-          content: `You are a real-time interview coach whispering advice to a candidate during a live mock interview. Given the job description, candidate background, and the most recent exchange, generate ONE brief, actionable coaching insight (1-2 sentences, under 40 words). Focus on what the candidate should do or mention in their NEXT response. Be specific and tactical — reference actual skills, projects, or job requirements. Never use bullet points or numbered lists.`,
+          content: `You are a real-time interview coach whispering advice to a candidate during a live mock interview. You respond with a JSON object containing two fields:
+
+1. "insight": A specific, actionable coaching tip (1-2 sentences, under 40 words) for the candidate's NEXT response. Reference their actual resume projects, skills, or specific job requirements by name. Examples: "Mention your work on the payments migration at Acme — it directly maps to their microservices requirement." or "They're testing system design thinking — walk through data flow before jumping to implementation."
+
+2. "type": One of these categories:
+   - "mention" — candidate should bring up a specific skill, project, or experience
+   - "technique" — candidate should use a specific answering technique (STAR, tradeoff analysis, etc.)
+   - "warning" — candidate is going off track, being too vague, or missing the point
+   - "depth" — candidate should go deeper on their current topic with specifics
+
+Never use bullet points or lists in the insight. Be direct and tactical.`,
         },
         {
           role: "user",
-          content: `## Job Description\n${rawText.slice(0, 2000)}${resumeSection}\n\n## Recent Conversation\n${recentTranscript}\n\nGenerate a brief coaching insight for the candidate's next response:`,
+          content: `## Job Description\n${rawText.slice(0, 2000)}${resumeSection}\n\n## Recent Conversation\n${recentTranscript}\n\nGenerate coaching JSON:`,
         },
       ],
       temperature: 0.4,
       reasoning_effort: "low",
     })
 
-    const insight = completion.choices[0]?.message?.content ?? ""
+    const raw = completion.choices[0]?.message?.content ?? ""
 
-    return NextResponse.json({ insight })
+    let insight = raw
+    let type = "mention"
+    try {
+      const parsed = JSON.parse(raw)
+      insight = parsed.insight ?? raw
+      type = parsed.type ?? "mention"
+    } catch {
+      // If model didn't return valid JSON, use raw text as insight
+    }
+
+    return NextResponse.json({ insight, type })
   } catch (error) {
     console.error("Insight error:", error)
     return NextResponse.json(

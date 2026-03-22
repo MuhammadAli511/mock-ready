@@ -12,7 +12,6 @@ import {
   Globe,
   TrendingUp,
   Loader2,
-  HelpCircle,
   DollarSign,
 } from "lucide-react"
 import type {
@@ -29,6 +28,7 @@ import type {
   PrepQuestions,
   SalaryIntel,
 } from "@/lib/types"
+import { PracticeCards } from "@/components/practice-cards"
 
 // --- Shared helpers ---
 
@@ -207,27 +207,6 @@ function SignalsCard({ data }: { data: SignalsAnalysis }) {
   )
 }
 
-function PrepQuestionsCard({ data }: { data: PrepQuestions }) {
-  return (
-    <DashCard className="md:col-span-2">
-      <p className="label-mono mb-3">
-        <HelpCircle className="mr-1 inline h-3 w-3" />
-        Questions to Prepare
-      </p>
-      <div className="grid gap-3 md:grid-cols-2 md:gap-x-6">
-        {data.questions.map((q, i) => (
-          <div key={i}>
-            <p className="text-[12px] text-[#fafafa]">{q.question}</p>
-            <div className="mt-1 flex items-center gap-2">
-              <DashBadge className="text-[8px]">{q.category}</DashBadge>
-              <span className="text-[10px] text-[#3f3f46]">{q.tip}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </DashCard>
-  )
-}
 
 function SalaryIntelCard({ data }: { data: SalaryIntel }) {
   return (
@@ -654,7 +633,9 @@ export function ScrapePreview({
         {prepQuestions.isLoading ? (
           <CardSkeleton lines={6} className="md:col-span-2" />
         ) : prepQuestions.data ? (
-          <PrepQuestionsCard data={prepQuestions.data} />
+          <div className="md:col-span-2">
+            <PracticeCards data={prepQuestions.data} />
+          </div>
         ) : null}
 
         {news.isLoading ? (

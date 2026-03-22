@@ -3,8 +3,59 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useConversation } from "@elevenlabs/react"
 import { AnimatePresence, motion } from "motion/react"
-import { PhoneOff } from "lucide-react"
+import {
+  PhoneOff,
+  Eye,
+  EyeOff,
+  Sparkles,
+  Target,
+  AlertTriangle,
+  ArrowDown,
+} from "lucide-react"
 import type { TranscriptMessage } from "@/lib/types"
+
+type InsightType = "mention" | "technique" | "warning" | "depth"
+
+interface CoachInsight {
+  id: string
+  insight: string
+  type: InsightType
+  timestamp: Date
+}
+
+const insightConfig: Record<
+  InsightType,
+  { label: string; color: string; border: string; bg: string; icon: typeof Sparkles }
+> = {
+  mention: {
+    label: "Mention",
+    color: "text-[#3b82f6]",
+    border: "border-[#3b82f6]/30",
+    bg: "bg-[#3b82f6]/10",
+    icon: Sparkles,
+  },
+  technique: {
+    label: "Technique",
+    color: "text-[#8b5cf6]",
+    border: "border-[#8b5cf6]/30",
+    bg: "bg-[#8b5cf6]/10",
+    icon: Target,
+  },
+  warning: {
+    label: "Heads Up",
+    color: "text-[#f59e0b]",
+    border: "border-[#f59e0b]/30",
+    bg: "bg-[#f59e0b]/10",
+    icon: AlertTriangle,
+  },
+  depth: {
+    label: "Go Deeper",
+    color: "text-[#22c55e]",
+    border: "border-[#22c55e]/30",
+    bg: "bg-[#22c55e]/10",
+    icon: ArrowDown,
+  },
+}
 
 interface LiveInterviewProps {
   rawText: string
@@ -37,7 +88,7 @@ function buildInterviewerPrompt(
 ## INTERVIEW FLOW — Follow this structure in order
 
 ### Phase 1: INTRODUCTION & WARMUP (1-2 turns)
-Start with a warm, professional welcome. Briefly introduce yourself (pick a realistic name and title, e.g. "I'm Sarah, Engineering Director here at ${companyLabel}"). Explain the format casually: "We'll spend about 30 minutes together — I'll ask about your background, dive into some technical topics, and leave time at the end for your questions."
+Start with a warm, professional welcome. Briefly introduce yourself (pick a realistic name and title, e.g. "I'm John, Engineering Director here at ${companyLabel}"). Explain the format casually: "We'll spend about 30 minutes together — I'll ask about your background, dive into some technical topics, and leave time at the end for your questions."
 Then ask them to walk you through their background and what brought them to this opportunity. Listen carefully — their answer seeds your follow-up questions for the rest of the interview.
 
 ### Phase 2: EXPERIENCE & BACKGROUND (2-3 questions)
@@ -124,11 +175,13 @@ export function LiveInterview({
   const [streamingText, setStreamingText] = useState<string | null>(null)
   const streamingTextRef = useRef<string>("")
 
-  // Insight state
-  const [currentInsight, setCurrentInsight] = useState<string | null>(null)
-  const [insightVisible, setInsightVisible] = useState(false)
+  // Coach state
+  const [coachEnabled, setCoachEnabled] = useState(true)
+  const [insights, setInsights] = useState<CoachInsight[]>([])
+  const [insightLoading, setInsightLoading] = useState(false)
   const insightAbortRef = useRef<AbortController | null>(null)
   const lastInsightTimeRef = useRef<number>(0)
+  const insightsEndRef = useRef<HTMLDivElement>(null)
 
   const roleLabel = roleName || "this role"
   const companyLabel = companyName || "the company"
@@ -145,7 +198,7 @@ export function LiveInterview({
           ),
         },
         language: "en",
-        firstMessage: `Hey, welcome! I'm Sarah from ${companyLabel}. Thanks for chatting with me about the ${roleLabel} role. To get us started — tell me a bit about yourself and what drew you to this opportunity.`,
+        firstMessage: `Hey, welcome! I'm John from ${companyLabel}. Thanks for chatting with me about the ${roleLabel} role. To get us started — tell me a bit about yourself and what drew you to this opportunity.`,
       },
     }),
     [rawText, resumeText, roleLabel, companyLabel],
@@ -244,6 +297,8 @@ export function LiveInterview({
   }, [conversation, onEnd])
 
   const fetchInsight = useCallback(async () => {
+    if (!coachEnabled) return
+
     const now = Date.now()
     if (now - lastInsightTimeRef.current < 10_000) return
     lastInsightTimeRef.current = now
@@ -259,6 +314,8 @@ export function LiveInterview({
           `${m.role === "agent" ? "Interviewer" : "Candidate"}: ${m.message}`,
       )
       .join("\n\n")
+
+    setInsightLoading(true)
 
     try {
       const res = await fetch("/api/insight", {
@@ -277,18 +334,31 @@ export function LiveInterview({
       const data = await res.json()
       if (!data.insight) return
 
-      setCurrentInsight(data.insight)
-      setInsightVisible(true)
+      const newInsight: CoachInsight = {
+        id: crypto.randomUUID(),
+        insight: data.insight,
+        type: data.type ?? "mention",
+        timestamp: new Date(),
+      }
+
+      setInsights((prev) => [...prev, newInsight])
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return
       console.error("Insight fetch error:", err)
+    } finally {
+      setInsightLoading(false)
     }
-  }, [rawText, resumeText])
+  }, [rawText, resumeText, coachEnabled])
 
   // Auto-scroll transcript to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, streamingText])
+
+  // Auto-scroll insights to bottom
+  useEffect(() => {
+    insightsEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [insights])
 
   // Cleanup insight on unmount
   useEffect(() => {
@@ -343,34 +413,109 @@ export function LiveInterview({
 
   const isConnected = conversation.status === "connected"
   const isSpeaking = debouncedSpeaking
-
   return (
     <div className="fixed inset-0 z-[60] flex flex-col bg-[#09090b]">
-      {/* AI Insight floating panel */}
+      {/* Coach toggle */}
+      <div className="absolute left-4 top-4 z-[70]">
+        <button
+          onClick={() => setCoachEnabled(!coachEnabled)}
+          className={`flex items-center gap-2 rounded-lg border px-3 py-2 font-mono text-[10px] uppercase tracking-[0.15em] transition-all ${
+            coachEnabled
+              ? "border-[#3b82f6]/30 bg-[#3b82f6]/10 text-[#3b82f6]"
+              : "border-[#27272a] text-[#3f3f46] hover:border-[#3f3f46]"
+          }`}
+        >
+          {coachEnabled ? (
+            <Eye className="h-3.5 w-3.5" />
+          ) : (
+            <EyeOff className="h-3.5 w-3.5" />
+          )}
+          Coach {coachEnabled ? "On" : "Off"}
+        </button>
+      </div>
+
+      {/* AI Coach panel — right side */}
       <AnimatePresence>
-        {insightVisible && currentInsight !== null && (
+        {coachEnabled && insights.length > 0 && (
           <motion.div
-            key="insight-panel"
-            initial={{ opacity: 0, x: 80, scale: 0.95 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: 80, scale: 0.95 }}
+            key="coach-panel"
+            initial={{ opacity: 0, x: 80 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 80 }}
             transition={{
               type: "spring",
               damping: 22,
               stiffness: 280,
               mass: 0.8,
             }}
-            className="absolute right-4 top-4 z-[70] max-w-[280px] rounded-lg border border-[#eab308]/30 bg-[#111113]/95 px-4 py-3 backdrop-blur-md"
+            className="absolute right-4 top-4 z-[70] flex w-[300px] max-h-[calc(100vh-240px)] flex-col rounded-xl border border-[#1c1c1e] bg-[#111113]/95 backdrop-blur-md"
           >
-            <div className="mb-1.5 flex items-center gap-1.5">
-              <div className="h-1.5 w-1.5 rounded-full bg-[#eab308]" />
-              <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-[#eab308]">
-                AI Insight
+            {/* Panel header */}
+            <div className="flex items-center justify-between border-b border-[#1c1c1e] px-4 py-2.5">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-3.5 w-3.5 text-[#3b82f6]" />
+                <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-[#a1a1aa]">
+                  Live Coach
+                </span>
+              </div>
+              <span className="font-mono text-[9px] text-[#3f3f46]">
+                {insights.length} tip{insights.length !== 1 ? "s" : ""}
               </span>
             </div>
-            <p className="text-[13px] leading-relaxed text-[#e4e4e7]">
-              {currentInsight}
-            </p>
+
+            {/* Insights list */}
+            <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2">
+              {insights.map((item, i) => {
+                const config = insightConfig[item.type] ?? insightConfig.mention
+                const Icon = config.icon
+                const isLatest = i === insights.length - 1
+
+                return (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: isLatest ? 1 : 0.5, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className={`rounded-lg border p-3 transition-opacity ${
+                      isLatest
+                        ? `${config.border} ${config.bg}`
+                        : "border-transparent bg-transparent"
+                    }`}
+                  >
+                    <div className="mb-1.5 flex items-center gap-1.5">
+                      <Icon className={`h-3 w-3 ${config.color}`} />
+                      <span
+                        className={`font-mono text-[9px] uppercase tracking-[0.15em] ${config.color}`}
+                      >
+                        {config.label}
+                      </span>
+                      <span className="ml-auto font-mono text-[8px] text-[#3f3f46]">
+                        {item.timestamp.toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </div>
+                    <p
+                      className={`text-[12px] leading-relaxed ${
+                        isLatest ? "text-[#e4e4e7]" : "text-[#52525b]"
+                      }`}
+                    >
+                      {item.insight}
+                    </p>
+                  </motion.div>
+                )
+              })}
+              {insightLoading && (
+                <div className="flex items-center gap-2 px-3 py-2">
+                  <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#3b82f6]" />
+                  <span className="font-mono text-[9px] text-[#3f3f46]">
+                    Thinking...
+                  </span>
+                </div>
+              )}
+              <div ref={insightsEndRef} />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -474,7 +619,7 @@ export function LiveInterview({
                           msg.role === "agent" ? "#3b82f6" : "#22c55e",
                       }}
                     >
-                      {msg.role === "agent" ? "Sarah" : "You"}
+                      {msg.role === "agent" ? "John" : "You"}
                     </span>
                     <span className="font-mono text-[9px] text-[#3f3f46]">
                       {msg.timestamp.toLocaleTimeString([], {
@@ -494,7 +639,7 @@ export function LiveInterview({
                   <div className="mb-0.5 flex items-center gap-1.5">
                     <div className="h-1.5 w-1.5 rounded-full bg-[#3b82f6]" />
                     <span className="font-mono text-[10px] font-medium text-[#3b82f6]">
-                      Sarah
+                      John
                     </span>
                   </div>
                   <p className="pl-[11px] text-[13px] leading-relaxed text-[#d4d4d8]">
