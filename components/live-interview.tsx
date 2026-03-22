@@ -77,8 +77,8 @@ export function LiveInterview({
             resumeText,
           ),
         },
-        firstMessage: `Hi there! Thanks for joining. I'm excited to chat with you about the ${roleLabel} position at ${companyLabel}. Before we dive into the specifics, I'd love to hear a bit about you — could you tell me about your background and what drew you to this role?`,
         language: "en",
+        firstMessage: `Hi there! Thanks for joining. I'm excited to chat with you about the ${roleLabel} position at ${companyLabel}. Before we dive into the specifics, I'd love to hear a bit about you — could you tell me about your background and what drew you to this role?`,
       },
     }),
     [rawText, resumeText, roleLabel, companyLabel],
@@ -146,6 +146,29 @@ export function LiveInterview({
     }
   }, [conversation, onEnd])
 
+  // Debounce the transition to "listening" — only show it after 2s of
+  // persistent non-speaking state so the UI doesn't flicker.
+  const rawSpeaking = conversation.isSpeaking
+  const [debouncedSpeaking, setDebouncedSpeaking] = useState(rawSpeaking)
+  const speakingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (rawSpeaking) {
+      if (speakingTimerRef.current) {
+        clearTimeout(speakingTimerRef.current)
+        speakingTimerRef.current = null
+      }
+      setDebouncedSpeaking(true)
+    } else {
+      speakingTimerRef.current = setTimeout(() => {
+        setDebouncedSpeaking(false)
+      }, 2000)
+    }
+    return () => {
+      if (speakingTimerRef.current) clearTimeout(speakingTimerRef.current)
+    }
+  }, [rawSpeaking])
+
   if (connectionError) {
     return (
       <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-[#09090b]">
@@ -168,7 +191,7 @@ export function LiveInterview({
   }
 
   const isConnected = conversation.status === "connected"
-  const isSpeaking = conversation.isSpeaking
+  const isSpeaking = debouncedSpeaking
 
   return (
     <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-[#09090b]">

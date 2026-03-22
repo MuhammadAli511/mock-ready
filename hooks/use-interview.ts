@@ -7,10 +7,12 @@ interface UseInterviewReturn {
   state: InterviewState
   scrapeResult: ScrapeResult | null
   resumeText: string | null
+  roleName: string | null
+  companyName: string | null
   debrief: SessionDebrief | null
   error: string | null
   submitJob: (url: string, resumeFile: File | null) => Promise<void>
-  startInterview: () => void
+  startInterview: (roleName?: string, companyName?: string) => void
   endInterview: (conversationId: string) => Promise<void>
   reset: () => void
 }
@@ -19,6 +21,8 @@ export function useInterview(): UseInterviewReturn {
   const [state, setState] = useState<InterviewState>("IDLE")
   const [scrapeResult, setScrapeResult] = useState<ScrapeResult | null>(null)
   const [resumeText, setResumeText] = useState<string | null>(null)
+  const [roleName, setRoleName] = useState<string | null>(null)
+  const [companyName, setCompanyName] = useState<string | null>(null)
   const [debrief, setDebrief] = useState<SessionDebrief | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -69,9 +73,14 @@ export function useInterview(): UseInterviewReturn {
     }
   }, [])
 
-  const startInterview = useCallback(() => {
-    setState("IN_PROGRESS")
-  }, [])
+  const startInterview = useCallback(
+    (role?: string, company?: string) => {
+      if (role) setRoleName(role)
+      if (company) setCompanyName(company)
+      setState("IN_PROGRESS")
+    },
+    [],
+  )
 
   const endInterview = useCallback(
     async (conversationId: string) => {
@@ -106,6 +115,8 @@ export function useInterview(): UseInterviewReturn {
     setState("IDLE")
     setScrapeResult(null)
     setResumeText(null)
+    setRoleName(null)
+    setCompanyName(null)
     setDebrief(null)
     setError(null)
   }, [])
@@ -114,6 +125,8 @@ export function useInterview(): UseInterviewReturn {
     state,
     scrapeResult,
     resumeText,
+    roleName,
+    companyName,
     debrief,
     error,
     submitJob,

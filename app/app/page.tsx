@@ -12,6 +12,8 @@ export default function AppPage() {
     state,
     scrapeResult,
     resumeText,
+    roleName,
+    companyName,
     debrief,
     error,
     submitJob,
@@ -52,7 +54,8 @@ export default function AppPage() {
         <LiveInterview
           rawText={scrapeResult.rawText}
           resumeText={resumeText}
-          roleName={scrapeResult.title}
+          roleName={roleName ?? undefined}
+          companyName={companyName ?? undefined}
           onEnd={endInterview}
         />
       )}

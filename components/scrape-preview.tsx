@@ -472,7 +472,7 @@ interface ScrapePreviewProps {
   rawText: string
   companyHint?: string
   resumeText?: string | null
-  onStartInterview: () => void
+  onStartInterview: (roleName?: string, companyName?: string) => void
   onReset: () => void
 }
 
@@ -567,7 +567,9 @@ export function ScrapePreview({
             <RotateCcw className="h-4 w-4" />
           </button>
           <button
-            onClick={onStartInterview}
+            onClick={() =>
+              onStartInterview(role.data?.role, role.data?.company)
+            }
             disabled={coreLoading}
             className="flex items-center gap-2 rounded-lg bg-[#fafafa] px-5 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-[#09090b] transition-opacity hover:opacity-90 disabled:opacity-30"
           >
