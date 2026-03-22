@@ -1,3 +1,10 @@
+export interface TranscriptMessage {
+  id: string
+  role: "user" | "agent"
+  message: string
+  timestamp: Date
+}
+
 export type InterviewState =
   | "IDLE"
   | "SCRAPING"
