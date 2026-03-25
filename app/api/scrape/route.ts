@@ -70,8 +70,8 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error: isUnsupported
-          ? "This site is not supported by Firecrawl. Please copy and paste the job description instead."
-          : "Failed to scrape job posting. Try pasting the job description directly.",
+          ? "This site is not supported by Firecrawl."
+          : "Failed to scrape job posting.",
         code: isUnsupported ? "UNSUPPORTED_SITE" : "SCRAPE_FAILED",
       },
       { status: isUnsupported ? 422 : 500 },
