@@ -5,6 +5,12 @@
 
 ---
 
+
+https://github.com/user-attachments/assets/f6340afe-6466-43fd-9731-e72ad69d76fa
+
+
+---
+
 ## What MockReady Does
 
 MockReady is a voice-powered AI career coach and interview simulator. The marketing site lives at **`/`**; the product runs at **`/app`**.
